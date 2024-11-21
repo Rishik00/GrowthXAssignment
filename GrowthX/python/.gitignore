@@ -7,7 +7,7 @@ __pycache__/
 *.so
 *.dylib
 *.dll
-
+.env
 # C extensions
 *.c
 *.cpp

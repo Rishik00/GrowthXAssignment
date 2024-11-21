@@ -84,34 +84,3 @@ class UserMongoClient:
             return False
 
 
-# Main execution for testing
-# if __name__ == "__main__":
-#     # Set up the MongoDB connection
-#     mongo_uri = "mongodb+srv://myAtlasDBUser:db123@myatlasclusteredu.pn2vp0w.mongodb.net/?retryWrites=true&w=majority&appName=myAtlasClusterEDU"
-#     client = UserMongoClient(mongo_uri, dbname="User", cname="UserAssignments")
-
-#     # Ping the database to ensure the connection is successful
-#     client.ping()
-
-#     # Insert multiple assignments
-#     print("\nInserting 10 New Assignments...")
-#     for i in range(10):
-#         new_assignment = UserAssignment(
-#             assignment_id=None,  # Will assign this ID dynamically
-#             name=f"Sample Assignment {i + 1}",
-#             description=f"This is a sample assignment description for assignment {i + 1}."
-#         )
-#         new_assignment_id = client.insert_one_document(new_assignment)
-
-#     # Retrieve all assignments
-#     print("\nAll Assignments:")
-#     all_assignments = client.get_all_documents(limit=10)
-#     for assignment in all_assignments:
-#         print(assignment.model_dump())
-    
-#     # Optionally, retrieve a specific assignment by ID (for example, the first one)
-#     if new_assignment_id:
-#         print("\nFetching Assignment by ID:")
-#         retrieved_assignment = client.get_document_by_id(new_assignment_id)
-#         if retrieved_assignment:
-#             print(retrieved_assignment.model_dump())
