@@ -15,7 +15,7 @@ class MongoAssignment(UserAssignment):
     # MongoAssignment will be used to serialize the data from MongoDB
     pass
 
-class UserMongoClient:
+class MyMongoClient:
     
     def __init__(self, atlas_uri: str, dbname: str, cname: str):
         # Initialize MongoDB client and collection
