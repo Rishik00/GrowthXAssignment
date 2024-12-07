@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 
 from models.models import admins_db
-from models.mongoclient import MongoAssignment, MyMongoClient
+from models.mongoclient import MyMongoClient, UserAssignment
 from admin.admin_utils import create_access_token, get_current_admin
 
 load_dotenv()
@@ -30,7 +30,7 @@ async def for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": access_token, "token_type": "bearer"}
 
 # 2. View all assignments (Protected)
-@router.get("/assignments/", response_model=List[MongoAssignment])
+@router.get("/assignments/", response_model=List[UserAssignment])
 async def view_all_assignments(
     limit: int = 5, username: str = Depends(get_current_admin)
 ):
@@ -40,7 +40,7 @@ async def view_all_assignments(
     return assignments
 
 
-@router.get("/assignments/{assignment_id}", response_model=MongoAssignment)
+@router.get("/assignments/{assignment_id}", response_model=UserAssignment)
 async def view_assignment_by_id(
     assignment_id: int, admin: str = Depends(get_current_admin)
 ):
@@ -64,3 +64,16 @@ async def delete_assignment(
         return assignment_id
     
     raise HTTPException(status_code=404, detail="Assignment not found")
+
+@router.get("/admin_assignments/{adminname}", response_model=UserAssignment)
+async def get_assignment_by_admin(
+    adminname: str, admin: str = Depends(get_current_admin)
+):
+    # Fetch assignment by username
+    print(adminname)
+    assignment = client.get_document_by_field('admin', adminname)
+    print(assignment)
+    if assignment:
+        return assignment
+    raise HTTPException(status_code=404, detail="Assignment not found")
+

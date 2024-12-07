@@ -13,7 +13,8 @@ class User(BaseModel):
     password: str
 
 admins_db = {
-    "admin2": Admin(username="admin2", password=pwd_context.hash("password1")),
+    "admin2": Admin(username="admin2", password=pwd_context.hash("password2")),
+    "admin1": Admin(username="admin1", password=pwd_context.hash("password1"))
 }
 
 users_db = {

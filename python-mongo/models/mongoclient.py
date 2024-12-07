@@ -1,75 +1,59 @@
 from pydantic import BaseModel
 from pymongo.mongo_client import MongoClient
-from bson import ObjectId
-from typing import Optional, List
-
-from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Union
 
 class UserAssignment(BaseModel):
-    assignment_id: Optional[int]  # Optional, will be assigned dynamically
+    assignment_id: Optional[int] = None  # Default to None
     name: str
+    user: str
     description: str
-
-class MongoAssignment(UserAssignment):
-    # MongoAssignment will be used to serialize the data from MongoDB
-    pass
+    admin: str
 
 class MyMongoClient:
-    
     def __init__(self, atlas_uri: str, dbname: str, cname: str):
-        # Initialize MongoDB client and collection
+        """Initialize MongoDB client and collection."""
         self.mongodb_client = MongoClient(atlas_uri)
         self.database = self.mongodb_client[dbname]
         self.collection = self.database[cname]
-    
+
+        # Ensure assignment_id index
+        self.collection.create_index("assignment_id", unique=True)
+
     def ping(self):
         """Ping the MongoDB server to confirm connection."""
-        self.mongodb_client.admin.command('ping')
+        self.mongodb_client.admin.command("ping")
         print("Pinged the MongoDB server.")
 
-    def insert_one_document(self, data: UserAssignment):
+    def insert_one_document(self, data: UserAssignment) -> Optional[int]:
         """Insert a new document into the collection with a sequential ID."""
-        # Get the current maximum assignment_id from the collection and increment it
-        last_assignment = self.collection.find().sort("assignment_id", -1).limit(1)  # Sort by assignment_id in descending order
-        last_assignment = list(last_assignment)
-        new_assignment_id = 1 if not last_assignment else last_assignment[0]["assignment_id"] + 1  # Start at 1 if no documents
-        
-        # Add the assignment_id to the data
-        validated_data = data.model_dump()  # Serialize using model_dump()
-        validated_data["assignment_id"] = new_assignment_id  # Set the assignment_id
-        
-        # Insert the document into the collection
-        post_id = self.collection.insert_one(validated_data).inserted_id
-        print(f"Inserted document with ID: {new_assignment_id}")
-        return new_assignment_id
+        try:
+            last_assignment = list(self.collection.find().sort("assignment_id", -1).limit(1))
+            new_assignment_id = 1 if not last_assignment else last_assignment[0]["assignment_id"] + 1
 
-    def get_all_documents(self, limit: int = 5):
+            validated_data = data.model_dump()
+            validated_data["assignment_id"] = new_assignment_id
+
+            self.collection.insert_one(validated_data)
+            print(f"Inserted document with assignment_id: {new_assignment_id}")
+            return new_assignment_id
+        except Exception as e:
+            print(f"Error inserting document: {e}")
+            return None
+
+    def get_all_documents(self, limit: int = 5) -> List[UserAssignment]:
         """Retrieve documents from the collection."""
         assignments = self.collection.find().limit(limit)
-        assignments_list = [
-            MongoAssignment(
-                assignment_id=assignment["assignment_id"], 
-                name=assignment["name"], 
-                description=assignment["description"]
-            )
-            for assignment in assignments
-        ]
-        print(f"Found {len(assignments_list)} documents.")
-        return assignments_list
+        return [UserAssignment(**assignment) for assignment in assignments]
 
-    def get_document_by_id(self, assignment_id: int):
-        """Retrieve a specific document by its assignment_id."""
-        assignment = self.collection.find_one({"assignment_id": assignment_id})
+    def get_document_by_field(self, field: str, value: str) -> Optional[UserAssignment]:
+        """Retrieve a document by a specific field."""
+        assignment = self.collection.find_one({field: value})
+        print(assignment)
         if assignment:
-            return MongoAssignment(
-                assignment_id=assignment["assignment_id"], 
-                name=assignment["name"], 
-                description=assignment["description"]
-            )
+            return UserAssignment(**assignment)
         return None
 
-    def delete_one_document(self, assignment_id: int):
+    def delete_one_document(self, assignment_id: int) -> bool:
         """Delete a document by its assignment_id."""
         try:
             result = self.collection.delete_one({"assignment_id": assignment_id})
@@ -83,4 +67,6 @@ class MyMongoClient:
             print(f"Error deleting document: {e}")
             return False
 
-
+    def close(self):
+        """Close the MongoDB client connection."""
+        self.mongodb_client.close()

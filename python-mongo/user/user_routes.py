@@ -7,7 +7,7 @@ import os
 
 from models.models import users_db
 from user.user_utils import create_access_token, get_current_user
-from models.mongoclient import MyMongoClient, MongoAssignment, UserAssignment
+from models.mongoclient import MyMongoClient, UserAssignment
 
 load_dotenv()
 router = APIRouter()
@@ -39,7 +39,7 @@ async def add_assignment(
     return new_assignment_id
 
 # 2. View all assignments (Protected)
-@router.get("/assignments/", response_model=List[MongoAssignment])
+@router.get("/assignments/", response_model=List[UserAssignment])
 async def view_all_assignments(
     limit: int = 5, username: str = Depends(get_current_user)
 ):
@@ -49,11 +49,26 @@ async def view_all_assignments(
     return assignments
 
 # 3. View an assignment by ID (Protected)
-@router.get("/assignments/{assignment_id}", response_model=MongoAssignment)
+@router.get("/assignments/{assignment_id}", response_model=UserAssignment)
 async def view_assignment_by_id(
     assignment_id: int, username: str = Depends(get_current_user)
 ):
-    assignment = client.get_document_by_id(assignment_id)
+    assignment = client.get_document_by_field('assignment_id', assignment_id)
+    print(assignment)
     if assignment:
         return assignment
     raise HTTPException(status_code=404, detail="Assignment not found")
+
+@router.get("/user_assignments/{user}", response_model=UserAssignment)
+async def get_assignment_by_username(
+    user: str, username: str = Depends(get_current_user)
+):
+    # Fetch assignment by username
+    print(user)
+    assignment = client.get_document_by_field('user', user)
+    print(assignment)
+    if assignment:
+        return assignment
+    raise HTTPException(status_code=404, detail="Assignment not found")
+
+
