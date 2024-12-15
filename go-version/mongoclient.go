@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"log"
 	"encoding/json"
+	"fmt"
+	"log"
+	"os"
 
+	// "github.com/bytedance/sonic/option"
 	"github.com/joho/godotenv" // Load environment variables from .env file
+	// "github.com/mailru/easyjson/opt/optional"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -31,6 +33,7 @@ func init() {
 // ConnectToDB initializes the MongoDB client and returns a connected client
 func ConnectToDB() (*mongo.Client, error) {
 	uri := os.Getenv("MONGO_URI")
+	fmt.Println("Connected to the mongo cluster")
 	if uri == "" {
 		return nil, fmt.Errorf("set the mongo_uri environment variable")
 	}
@@ -49,18 +52,20 @@ func ConnectToDB() (*mongo.Client, error) {
 }
 
 // getOneDocument fetches a single document from the specified collection
-func getOneDocument(client *mongo.Client) (string, error) {
+func getOneDocument(client *mongo.Client, filter bson.D) (string, error) {
 	coll := client.Database("User").Collection("UserAssignments")
 	var result bson.M
 
-	err := coll.FindOne(context.TODO(), bson.D{{Key: "user", Value: "user1"}}).Decode(&result)
+	fmt.Println("Here in the enddpoint fn")
+	fmt.Println("The filter is: ", filter)
+	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return "", fmt.Errorf("no document found")
 		}
 		return "", fmt.Errorf("error fetching document: %w", err)
 	}
-
+	fmt.Println("Result: ", result)
 	jsonData, err := json.MarshalIndent(result, "", "   ")
 	if err != nil {
 		return "", fmt.Errorf("error marshalling document to JSON: %w", err)
@@ -68,6 +73,7 @@ func getOneDocument(client *mongo.Client) (string, error) {
 
 	return string(jsonData), nil
 }
+
 
 func getAllDocuments(client *mongo.Client) (string, error) {
 	coll := client.Database("User").Collection("UserAssignments")
