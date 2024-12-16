@@ -57,7 +57,6 @@ func getOneDocument(client *mongo.Client, filter bson.D) (string, error) {
 	var result bson.M
 
 	fmt.Println("Here in the enddpoint fn")
-	fmt.Println("The filter is: ", filter)
 	err := coll.FindOne(context.TODO(), filter).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -141,6 +140,19 @@ func AddOneDocument(document UserAssignments, client *mongo.Client) (string, err
 
     fmt.Printf("Inserted document with ID: %v\n", result.InsertedID)
     return "Success", nil
+}
+
+func DeleteOneDocument(documentId int, client *mongo.Client) (string, error) {
+	fmt.Println("Deleting one document")
+	coll := client.Database("User").Collection("UserAssignments")
+
+	result, err := coll.DeleteOne(context.TODO(), bson.D{{Key: "assignment_id", Value: documentId}})
+	if err != nil {
+		return "", fmt.Errorf("Error deleting document: %w", err)
+	}
+
+	fmt.Println("Deleted document %w", result)
+	return "Success", nil
 }
 
 

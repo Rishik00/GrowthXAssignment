@@ -14,6 +14,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type User struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type Admin struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 func HelloEndPoint(c *gin.Context) {
 	fmt.Println("Hello world route! Maybe migrtion is going well")
 	message := c.Param("message")
@@ -77,6 +87,7 @@ func getAllDocumentsEndpoint (client *mongo.Client) gin.HandlerFunc {
 }
 
 func AddDocEndpoint(client *mongo.Client) gin.HandlerFunc {
+
     return func(c *gin.Context) {
         // Parse the JSON request body into a UserAssignments struct
         var document UserAssignments
@@ -105,6 +116,74 @@ func AddDocEndpoint(client *mongo.Client) gin.HandlerFunc {
     }
 }
 
+func DeleteEndpoint(client *mongo.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get the document ID from the URL parameter
+		documentIdStr := c.Param("id")
+		fmt.Println("Deleting for document ID: " + documentIdStr)
+
+		// Convert the string ID to an integer
+		documentId, err := strconv.Atoi(documentIdStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid document ID format",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		// Call the DeleteOneDocument function
+		message, err := DeleteOneDocument(documentId, client)
+		if err != nil {
+			if err.Error() == "no document found" { // Check for specific "not found" error
+				c.JSON(http.StatusNotFound, gin.H{
+					"error":   "Document not found",
+					"details": err.Error(),
+				})
+				return
+			}
+
+			// Return other errors as internal server errors
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Failed to delete document",
+				"details": err.Error(),
+			})
+			return
+		}
+
+		// Send a successful response
+		c.JSON(http.StatusOK, gin.H{
+			"message": message,
+		})
+	}
+}
+
+
+func AuthUser(c *gin.Context) {
+	var input User
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": err.Error(),
+		})
+		return 
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Username and password validated for user"})
+}
+
+func AuthAdmin(c *gin.Context) {
+	var input Admin
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"Error": err.Error(),
+		})
+		return 
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Username and password validated for admin"})
+}
 
 func main() {
 	client, err := ConnectToDB()
@@ -119,12 +198,25 @@ func main() {
 		}
 	}()
 
-	// Define routes with the MongoDB client passed to the handlers
 	router.POST("/message/:message", HelloEndPoint)
-	router.GET("/documents/", getAllDocumentsEndpoint(client))
-	router.GET("/documents/:id", getDocumentsEndpoint(client))
-	router.POST("/documents/", AddDocEndpoint(client))
+	user := router.Group("/user")
+	{
+		user.POST("/login/", AuthUser) // Havent tested
+		user.GET("/documents/", getAllDocumentsEndpoint(client))
+		user.GET("/documents/:id", getDocumentsEndpoint(client))
+		user.POST("/documents/", AddDocEndpoint(client))
+	}
 
+	admin := router.Group("/admin")
+	{
+		admin.POST("/login/", AuthAdmin) // Havent tested
+		admin.GET("/documents/", getAllDocumentsEndpoint(client))
+		admin.GET("/documents/:id", getDocumentsEndpoint(client))
+		admin.POST("/documents/", AddDocEndpoint(client))
+		admin.DELETE("/documents/:id", DeleteEndpoint(client))
+		
+	}
+	
 	// Start the server
 	if err := router.Run(); err != nil {
 		log.Fatal("Failed to start server:", err)
